@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 usage() {
     cat <<EOF
 Light wrapper around kind that generates the right configuration file for kind, then starts the cluster.
@@ -46,6 +44,9 @@ main() {
     done
 
     [ "$NAME" ] && [ "$NUM_NODES" ] && [ "$VERSION" ] || usage
+    
+    echo "docker info: "
+    docker info
 
     if [[ "$(${KIND_BIN} get clusters)" == *"${NAME}"* ]]; then
   	  echo "Dev cluster already running. Skipping cluster creation"
@@ -82,7 +83,10 @@ EOF
 
     # run kind
     local EXIT_STATUS=0
-    $KIND_BIN create cluster --name "$NAME" --config "$CONFIG_FILE" --image "kindest/node:v$VERSION" --wait 240s || EXIT_STATUS=$?
+    $KIND_BIN create cluster --name "$NAME" --config "$CONFIG_FILE" --image "kindest/node:v$VERSION" --wait 240s --retain
+    $KIND_BIN export logs --name "$NAME" logs
+    find logs -type f -exec sh -c 'echo "----------------------------------------------------"; echo "File: {}"; cat {}' \;
+
     setkubeconfig
 
     # clean up the config file
